@@ -16,6 +16,8 @@ PLUGIN_VERSION(0.1);
  */
 // bool ShowMQ2HotkeyCastingWindow = true;
 #if !defined(_M_AMD64)
+//Brainiac MVP in supplying this, I just put it together. 
+//32bit/RoF2 client signature is different than live/64bit.
 class CHotButtonWnd_Hook
 {
 public:
@@ -23,14 +25,17 @@ public:
 
 	void DoHotButton_Detour(int button, BOOL click)
 	{
+		//ItemPending is incremented during events, like casting a spell, so its set to zero temporarly while the method is called
+		//it needs to be zero or you will get "You can't use that command right now..."
 		int oldItemPending = std::exchange(pEverQuestInfo->ItemPending, 0);
-
+		//call original method with 0 itempending now
 		DoHotButton_Trampoline(button, click);
-
+		//replace the item pending back to the way it was. 
 		pEverQuestInfo->ItemPending = oldItemPending;
 	}
 };
 #else
+//64bit Live client signature
 class CHotButtonWnd_Hook
 {
 public:
