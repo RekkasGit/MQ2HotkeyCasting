@@ -10,6 +10,7 @@
 PreSetup("MQ2HotkeyCasting");
 PLUGIN_VERSION(0.1);
 
+uintptr_t MQ2HotkeyCasting_AllowSlashCommand;
 /**
  * Avoid Globals if at all possible, since they persist throughout your program.
  * But if you must have them, here is the place to put them.
@@ -18,7 +19,7 @@ PLUGIN_VERSION(0.1);
 #if defined(ROF2EMU)
 //Brainiac MVP in supplying this, I just put it together. 
 //32bit/RoF2 client signature is different than live/64bit.
-class CHotButtonWnd_Hook
+class MQ2HotkeyCasting_CHotButtonWnd_Hook
 {
 public:
 	DETOUR_TRAMPOLINE_DEF(void, DoHotButton_Trampoline, (int button, BOOL click));
@@ -32,6 +33,19 @@ public:
 		DoHotButton_Trampoline(button, click);
 		//replace the item pending back to the way it was. 
 		pEverQuestInfo->ItemPending = oldItemPending;
+	}
+};
+
+class MQ2HotkeyCasting_AllowSlashCommand_Hook
+{
+public:
+	DETOUR_TRAMPOLINE_DEF(int, AllowSlashCommand_Trampoline, (void));
+
+	int AllowSlashCommand_Detour(void)
+	{
+		//WriteChatf("\agForcing AllowSlashCommand");
+
+		return 1;
 	}
 };
 #else
@@ -62,7 +76,12 @@ PLUGIN_API void InitializePlugin()
 
 	DebugSpewAlways("MQ2HotkeyCasting::Initializing version %f", MQ2Version);
 	WriteChatf("\agTrying to Detour DoHotButton");
-	EzDetour(CHotButtonWnd__DoHotButton, &CHotButtonWnd_Hook::DoHotButton_Detour, &CHotButtonWnd_Hook::DoHotButton_Trampoline);
+	EzDetour(CHotButtonWnd__DoHotButton, &MQ2HotkeyCasting_CHotButtonWnd_Hook::DoHotButton_Detour, &MQ2HotkeyCasting_CHotButtonWnd_Hook::DoHotButton_Trampoline);
+	#if defined(ROF2EMU)
+		//allow things like /invite <whoever> while casting
+		MQ2HotkeyCasting_AllowSlashCommand = FixEQGameOffset(0x4DE9E0);
+		EzDetour(MQ2HotkeyCasting_AllowSlashCommand, &MQ2HotkeyCasting_AllowSlashCommand_Hook::AllowSlashCommand_Detour, &MQ2HotkeyCasting_AllowSlashCommand_Hook::AllowSlashCommand_Trampoline);
+	#endif
 	// Examples:
 	// AddCommand("/mycommand", MyCommand);
 	// AddXMLFile("MQUI_MyXMLFile.xml");
@@ -79,6 +98,9 @@ PLUGIN_API void ShutdownPlugin()
 {
 	DebugSpewAlways("MQ2HotkeyCasting::Shutting down");
 	RemoveDetour(CHotButtonWnd__DoHotButton);
+	#if defined(ROF2EMU)
+		RemoveDetour(MQ2HotkeyCasting_AllowSlashCommand);
+	#endif
 	// Examples:
 	// RemoveCommand("/mycommand");
 	// RemoveXMLFile("MQUI_MyXMLFile.xml");
