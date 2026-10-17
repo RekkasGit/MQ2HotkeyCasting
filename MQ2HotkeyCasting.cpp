@@ -50,11 +50,10 @@ public:
 };
 #else
 //64bit Live client signature
-class CHotButtonWnd_Hook
+class MQ2HotkeyCasting_CHotButtonWnd_Hook
 {
 public:
 	DETOUR_TRAMPOLINE_DEF(void, DoHotButton_Trampoline, (int button, BOOL click, const KeyCombo& combo));
-
 	void DoHotButton_Detour(int button, BOOL click, const KeyCombo& combo)
 	{
 		int oldItemPending = std::exchange(pEverQuestInfo->ItemPending, 0);
